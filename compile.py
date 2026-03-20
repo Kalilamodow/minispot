@@ -14,7 +14,7 @@ OPTIMIZE = "prod_trimming" in sys.argv
 USE_UPX = "upx_pack" in sys.argv
 
 if USE_UPX:
-    UPX_COMMAND = "upx --best dist/main.exe"
+    UPX_COMMAND = "upx --best dist/minispot.exe"
 else:
     UPX_COMMAND = "echo UPX packing disabled"
 
@@ -23,6 +23,10 @@ class CLCommand:
 
     def __init__(self):
         self.cur = "cl "
+    
+    def with_outfile(self, path: str):
+        self.cur += f"/Fe:{path} "
+        return self
 
     def with_resources(self, *res: list[str]):
         self.cur += " ".join(res) + " "
@@ -50,10 +54,6 @@ class CLCommand:
         self.cur += " "
         return self
     
-    def with_outputdir(self, d: str):
-        self.cur += f"/Fe:{d} "
-        return self
-    
     def with_optimization_maybe(self):
         if OPTIMIZE:
             self.cur += "/O1 /Os /DNDEBUG /Gy /link /OPT:REF /OPT:ICF "
@@ -68,8 +68,8 @@ class CLCommand:
 # what's Make?
 CL = (
     CLCommand()
+    .with_outfile(".\\dist\\minispot.exe")
     .with_resources("main.cpp", "resources.res")
-    .with_outputdir("./dist/")
     .with_standard("c++20")
     .with_better_exception_handling()
     .with_pps_macro("WEBVIEW2_STATIC_LIB")
