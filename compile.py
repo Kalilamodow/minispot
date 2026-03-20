@@ -10,6 +10,8 @@ if "novs" not in sys.argv:
 else:
     VS_INIT = "echo Not initializing VS environment."
 
+OPTIMIZE = "prod_trimming" in sys.argv
+
 class CLCommand:
     cur: str
 
@@ -45,6 +47,11 @@ class CLCommand:
     def with_outputdir(self, d: str):
         self.cur += f"/Fe:{d} "
         return self
+    
+    def with_optimization_maybe(self):
+        if OPTIMIZE:
+            self.cur += "/O1 /Os /DNDEBUG /Gy /link /OPT:REF /OPT:ICF "
+        return self
 
     def build(self):
         return self.cur[:-1]
@@ -74,6 +81,7 @@ CL = (
         "winhttp",
         "crypt32"
     )
+    .with_optimization_maybe()
 )
 
 # resources compiling
