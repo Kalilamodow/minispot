@@ -1,47 +1,63 @@
 <script lang="ts">
     import App from "./App.svelte";
     import Credentials from "./Credentials.svelte";
+    import LoadingText from "./lib/LoadingText.svelte";
+    import { isLoading } from "./state.ts";
 
     const params = new URLSearchParams(location.search);
-    const clientId = params.get("clientId");
 
-    // goes to spotify to get the auth code, redirect gets intercepted by c++
-    const spoGetAuthCode = (clientId: string) => {
-        const scope = "streaming\n user-read-email\n user-read-private\n playlist-read-private\n user-modify-playback-state";
-
-        const auth_query_parameters = new URLSearchParams({
-            response_type: "code",
-            client_id: clientId,
-            scope: scope,
-            redirect_uri: "http://127.0.0.1:20956/",
-        });
-
-        window.location.href =
-            "https://accounts.spotify.com/authorize/?" +
-            auth_query_parameters.toString();
-    };
-
-    let player = $state<Spotify.Player | null>(null);
-    const token = params.get("token");
+    let clientId = $state(params.get("client_id"));
+    let accessToken = $state(params.get("access_token"));
+    let spotifyReady = $state(false);
 
     window.onSpotifyWebPlaybackSDKReady = () => {
-        if (!clientId || clientId == "false") return;
-        if (!token) return spoGetAuthCode(clientId);
+        spotifyReady = true;
+        // !clientId && accessToken -> impossible -> debug backend
+        // !clientId && !accessToken -> no credentials -> show ui
+        // clientId && accessToken -> good to go -> show ui
+        // clientId && !accessToken -> unauthorized -> get auth code
+        if (clientId && !accessToken) {
+            const scope =
+                "streaming user-read-email user-read-private playlist-read-private user-modify-playback-state";
 
-        player = new Spotify.Player({
-            name: "minispot client",
-            getOAuthToken: (cb) => {
-                cb(token);
-            },
-            volume: 0.5,
-        });
+            const auth_query_parameters = new URLSearchParams({
+                response_type: "code",
+                client_id: clientId,
+                scope: scope,
+                redirect_uri: "http://127.0.0.1:20956/",
+            });
+
+            window.location.href =
+                "https://accounts.spotify.com/authorize/?" +
+                auth_query_parameters.toString();
+        } else {
+            $isLoading = false;
+        }
     };
 </script>
 
-{#if clientId === "false" || clientId === null}
+{#if !clientId}
     <Credentials />
-{:else if player !== null}
-    <App {player} token={token!} />
-{:else}
-    <strong class="fs-error">Loading...</strong>
+{:else if accessToken && spotifyReady}
+    <App {clientId} {accessToken} />
 {/if}
+{#if $isLoading}
+    <div class="fs-loading">
+        <LoadingText />
+    </div>
+{/if}
+
+<style>
+    .fs-loading {
+        position: fixed;
+        inset: 0;
+        background-color: #000a;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 24px;
+        font-weight: bold;
+    }
+</style>

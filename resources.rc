@@ -1,3 +1,1 @@
-#include "resources.h"
-
-IDR_HTML_FILE RCDATA "web_compiled.html"
+101 RCDATA "web/dist/index.html"

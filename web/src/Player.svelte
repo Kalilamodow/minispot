@@ -1,18 +1,21 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import Icon from "./Icon.svelte";
+    import Icon from "./lib/Icon.svelte";
+    import { isLoading } from "./state";
 
     type Props = {
         player: Spotify.Player;
-        deviceId: string;
-        token: string;
+        openPlaylistSelector: () => void;
     };
 
-    let { player, deviceId, token }: Props = $props();
+    let { player, openPlaylistSelector }: Props = $props();
 
     let currentTrack = $state<Spotify.Track | null>(null);
     let playing = $state(false);
-    let selectingPlaylist = $state(false);
+
+    $effect(() => {
+        if (currentTrack) $isLoading = false;
+    });
 
     const playerStateChanged = (state: Spotify.PlaybackState) => {
         if (!state) return;
@@ -21,56 +24,15 @@
     };
 
     onMount(() => {
+        $isLoading = true;
         player.addListener("player_state_changed", playerStateChanged);
-        startPlayback();
         return () =>
             player.removeListener("player_state_changed", playerStateChanged);
     });
-
-    const getUserPlaylists = async () => {
-        const response = await fetch(
-            "https://api.spotify.com/v1/me/playlists",
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            },
-        );
-        const json = await response.json();
-        return json.items;
-    };
-
-    const startPlayback = async (uri?: string) => {
-        currentTrack = null;
-        selectingPlaylist = false;
-        await fetch(
-            `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
-            {
-                method: "PUT",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(uri ? { context_uri: uri } : {}),
-            },
-        );
-    };
 </script>
 
-{#if selectingPlaylist}
-    <button type="button" onclick={() => (selectingPlaylist = false)}>
-        Back
-    </button>
-    <strong>Select playlist</strong><br />
-    {#await getUserPlaylists() then playlists}
-        {#each playlists as pl}
-            <button type="button" onclick={() => startPlayback(pl.uri)}>
-                {pl.name}
-            </button>
-        {/each}
-    {/await}
-{:else if currentTrack}
-    <div id="player">
+<div id="player">
+    {#if currentTrack}
         <img
             src={currentTrack.album.images[0].url}
             alt="Album cover for {currentTrack.name}"
@@ -93,17 +55,17 @@
                     ><Icon icon="next" /></button
                 >
             </div>
-            <button type="button" onclick={() => (selectingPlaylist = true)}>
-                Set playlist
+            <br />
+            <button type="button" onclick={() => openPlaylistSelector()}>
+                Change playlist
             </button>
         </div>
-    </div>
-{:else}
-    <div class="fs-error">Loading...</div>
-{/if}
+    {/if}
+</div>
 
 <style>
     #player {
+        margin-top: -5px; /* body padding */
         height: 100vh;
         display: flex;
         flex-direction: row;

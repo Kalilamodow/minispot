@@ -1,9 +1,5 @@
-.vscode/
-dist/
-wv2/
-main.obj
-resources.res
-web_compiled.html
+build/
+WebView2/
 
 web/dist
 web/node_modules

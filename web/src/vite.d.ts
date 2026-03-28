@@ -2,7 +2,7 @@ interface Window {
     onSpotifyWebPlaybackSDKReady: () => void;
     chrome: {
         webview: {
-            postMessage: (message: string) => void;
+            postMessage: (message: object) => void;
             addEventListener: (
                 eventType: string,
                 handler: (event: Event) => void,
